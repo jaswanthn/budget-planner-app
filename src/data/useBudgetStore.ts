@@ -4,6 +4,7 @@ import {
   fetchBuckets,
   fetchTransactions,
   createBucket,
+  updateBucket,
 } from "@/api/budget.api";
 import { createTransaction, deleteTransaction } from "@/api/transactions.api";
 import { supabase } from "@/lib/supabase";
@@ -259,6 +260,37 @@ export function useBudgetStore() {
     }
   }
 
+  async function setBucketLimit(bucketId: string, monthlyLimit: number) {
+    // Optimistic update locally
+    setData((prev) => ({
+      ...prev,
+      buckets: prev.buckets.map((b) =>
+        String(b.id) === String(bucketId) ? { ...b, limit: monthlyLimit } : b
+      ),
+    }));
+
+    try {
+      await updateBucket(bucketId, monthlyLimit);
+    } catch (e) {
+      console.error("Failed to update bucket limit", e);
+      // Re-sync from server as a fallback
+      try {
+        const rows = await fetchBuckets();
+        setData((prev) => ({
+          ...prev,
+          buckets: rows.map((b: any) => ({
+            id: b.id,
+            name: b.name,
+            limit: b.monthly_limit,
+            spent: prev.buckets.find((pb) => pb.id === b.id)?.spent ?? 0,
+          })),
+        }));
+      } catch (err) {
+        console.error("Failed to re-sync buckets", err);
+      }
+    }
+  }
+
   return {
     data,
     addTransaction,
@@ -268,5 +300,6 @@ export function useBudgetStore() {
     addFixedExpense,
     removeFixedExpense,
     addBucket: addBucketAction,
+    setBucketLimit,
   };
 }

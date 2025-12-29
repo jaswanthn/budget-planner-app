@@ -107,20 +107,21 @@ const mapToStandardFormat = (data: any[]): ParsedTransaction[] => {
         /dr.*amount/i,
       ]);
 
-      const deposit = findValueFuzzy([
-        /deposit/i,
-        /credit/i,
-        /^cr$/i,
-        /cr.*amount/i,
-      ]);
+      // const deposit = findValueFuzzy([
+      //   /deposit/i,
+      //   /credit/i,
+      //   /^cr$/i,
+      //   /cr.*amount/i,
+      // ]);
 
-      amount = deposit - withdrawal;
+      amount = withdrawal;
     }
 
     // Try to parse Date object
     let date = new Date().toISOString();
-    if (dateStr) {
-      const d = new Date(dateStr);
+    if (typeof dateStr === "string" && dateStr.includes("/")) {
+      const dateArr = dateStr.split("/");
+      const d = new Date(`${dateArr[1]}-${dateArr[0]}-${dateArr[2]}`);
       if (!isNaN(d.getTime())) {
         date = d.toISOString();
       }

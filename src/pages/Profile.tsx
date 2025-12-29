@@ -1,6 +1,7 @@
 import IncomeSection from "@/components/profile/IncomeSection";
 import RecurringExpensesSection from "@/components/profile/RecurringExpensesSection";
 import SavingsGoalSection from "@/components/profile/SavingsGoalSection";
+import BucketsSection from "@/components/profile/BucketsSection";
 
 export default function Profile() {
   return (
@@ -22,11 +23,14 @@ export default function Profile() {
           <SavingsGoalSection />
         </div>
 
-        {/* Fixed / Recurring expenses & Summary */}
+        {/* Fixed / Recurring expenses */}
         <div className="space-y-6">
           <RecurringExpensesSection />
         </div>
       </div>
+
+      {/* Bucket Limits */}
+      <BucketsSection />
     </div>
   );
 }

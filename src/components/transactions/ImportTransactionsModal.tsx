@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { motion, AnimatePresence } from "framer-motion";
 import { classifyTransactions } from "@/lib/gemini";
 import { parseStatementFile, ParsedTransaction } from "@/utils/fileParser";
 import { useBudgetStore } from "@/data/useBudgetStore";
@@ -8,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, Loader2, Sparkles, UploadCloud, FileSpreadsheet, CheckCircle2 } from "lucide-react";
+import { Loader2, Sparkles, UploadCloud, FileSpreadsheet, CheckCircle2 } from "lucide-react";
 
 export default function ImportTransactionsModal() {
   const [open, setOpen] = useState(false);
@@ -41,7 +38,7 @@ export default function ImportTransactionsModal() {
       
       // Auto-run AI Classification
       const mapping = await classifyTransactions(
-        parsed.map(t => ({ id: t.id, note: t.note, amount: t.amount })),
+        parsed.map(t => ({ id: t.id, note: t.note, amount: t.amount })).filter(t => t.amount !== 0),
         buckets
       );
       

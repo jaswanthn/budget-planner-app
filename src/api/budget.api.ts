@@ -30,3 +30,15 @@ export async function createBucket(name: string, monthlyLimit: number = 0) {
   if (error) throw error;
   return data;
 }
+
+export async function updateBucket(bucketId: string, monthlyLimit: number) {
+  const { data, error } = await supabase
+    .from("buckets")
+    .update({ monthly_limit: monthlyLimit })
+    .eq("id", bucketId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
