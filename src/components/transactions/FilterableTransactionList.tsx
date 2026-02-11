@@ -73,7 +73,7 @@ export default function FilterableTransactionList({ transactions, onDelete }: Pr
         </Select>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-6 pr-4">
         {Object.entries(grouped).length === 0 ? (
           <div className="text-center py-12 text-muted-foreground border-2 border-dashed border-border/40 rounded-xl">
              <p>No transactions found.</p>

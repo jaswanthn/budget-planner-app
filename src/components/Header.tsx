@@ -1,43 +1,81 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate, useLocation } from "react-router-dom";
+import { TodayIcon, BucketsIcon, TransactionsIcon, ReviewIcon, ProfileIcon, LogoutIcon } from "./icons";
+
+const tabConfig = [
+  {
+    path: "/",
+    label: "Today",
+    icon: TodayIcon,
+  },
+  {
+    path: "/buckets",
+    label: "Buckets",
+    icon: BucketsIcon,
+  },
+  {
+    path: "/transactions",
+    label: "Transactions",
+    icon: TransactionsIcon,
+  },
+  {
+    path: "/review",
+    label: "Review",
+    icon: ReviewIcon,
+  },
+  {
+    path: "/profile",
+    label: "Profile",
+    icon: ProfileIcon,
+  },
+];
 
 export default function HeaderTabs() {
   const navigate = useNavigate();
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 p-4 backdrop-blur-xl bg-card/80 border-b border-border/40 transition-all duration-200 flex justify-center items-center relative">
-      <Tabs
-        value={location.pathname}
-        onValueChange={(v) => navigate(v)}
-        className="w-full max-w-4xl"
-      >
-        <TabsList className="w-full h-12 bg-muted/30 p-1.5 rounded-full border border-border/40 backdrop-blur-md shadow-inner gap-2">
-          {["/", "/buckets", "/transactions", "/review", "/profile"].map((path) => (
-            <TabsTrigger
-              key={path}
-              value={path}
-              className="flex-1 rounded-full text-xs uppercase tracking-wider font-semibold 
-                         data-[state=active]:!bg-[var(--primary)] data-[state=active]:!text-[var(--primary-foreground)] 
-                         data-[state=active]:shadow-md data-[state=active]:shadow-primary/20
-                         hover:bg-background/40 transition-all duration-300 ease-out"
-            >
-              {path === "/" ? "Today" : path.slice(1)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      
-      <button 
-        onClick={async () => {
-          await import("@/api/auth.api").then(m => m.signOut());
-          window.location.reload();
-        }}
-        className="absolute right-4 p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all"
-        title="Logout"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-      </button>
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center justify-between px-6">
+        {/* Navigation Tabs */}
+        <div className="flex flex-1 items-center justify-center max-w-4xl">
+          <Tabs value={location.pathname} onValueChange={(v) => navigate(v)} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 h-12 bg-muted/50 rounded-lg p-1">
+              {tabConfig.map((tab) => (
+                <TabsTrigger
+                  key={tab.path}
+                  value={tab.path}
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium
+                             data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md
+                             text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors
+                             rounded-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <tab.icon />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </div>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Logout Button */}
+        <div className="flex items-center">
+          <button
+            onClick={async () => {
+              await import("@/api/auth.api").then(m => m.signOut());
+              window.location.reload();
+            }}
+            className="inline-flex items-center justify-center rounded-md p-2 text-sm font-medium
+                       text-muted-foreground hover:text-foreground hover:bg-accent
+                       transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title="Logout"
+          >
+            <LogoutIcon />
+          </button>
+        </div>
+      </div>
     </header>
   );
 }

@@ -32,9 +32,9 @@ export default function Transactions() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] grid lg:grid-cols-12 gap-6">
+    <div className="min-h-[calc(100vh-8rem)] lg:h-[calc(100vh-8rem)] grid lg:grid-cols-12 gap-6">
        {/* Left: Add Form */}
-       <div className="lg:col-span-4 space-y-6">
+       <div className="lg:col-span-4 space-y-6 lg:overflow-y-auto pr-3 pb-4">
           <Card className="shadow-lg bg-gradient-to-br from-card to-muted/20">
              <CardHeader>
                 <CardTitle>New Transaction</CardTitle>
