@@ -11,5 +11,9 @@
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true
-  }
+  },
+  "exclude": [
+    "mobile-app",
+    "node_modules"
+  ]
 }
