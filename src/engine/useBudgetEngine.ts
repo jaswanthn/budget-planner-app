@@ -5,6 +5,7 @@ import {
   getDaysInMonth,
   projectBucketSpend,
 } from "./budgetEngine";
+import { isInCurrentMonth } from "@/utils/dateUtils";
 
 export function useBudgetEngine(data: BudgetData) {
   const today = new Date();
@@ -16,10 +17,13 @@ export function useBudgetEngine(data: BudgetData) {
   const totalIncome = data.income;
   const totalFixedExpensesAmount = data.recurringExpenses.reduce(
     (sum, b) => sum + b.amount,
-    0
+    0,
   );
 
-  const totalSpent = data.buckets.reduce((sum, b) => sum + b.spent, 0);
+  // Only count expense transactions within the current month
+  const totalSpent = (data.transactions ?? [])
+    .filter((t) => isInCurrentMonth(t.date, today) && t.type !== "income")
+    .reduce((sum, t) => sum + t.amount, 0);
 
   const totalRemaining = totalIncome - totalFixedExpensesAmount - totalSpent;
 
@@ -46,5 +50,10 @@ export function useBudgetEngine(data: BudgetData) {
     monthStatus,
     bucketInsights,
     overshootingBuckets,
+    totalSpent,
+    totalIncome,
+    totalFixedExpensesAmount,
+    // What the user is "allowed" to spend: income minus fixed costs
+    spendableBudget: totalIncome - totalFixedExpensesAmount,
   };
 }

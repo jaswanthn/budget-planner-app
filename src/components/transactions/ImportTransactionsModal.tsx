@@ -12,11 +12,12 @@ import { Loader2, Sparkles, UploadCloud, FileSpreadsheet, CheckCircle2 } from "l
 
 export default function ImportTransactionsModal() {
   const [open, setOpen] = useState(false);
-  const { data, addTransaction, addBucket } = useBudgetStore();
+  const { data, addTransactions, addBucket } = useBudgetStore();
   const buckets = data.buckets.map(b => b.name);
 
   const [step, setStep] = useState<"upload" | "review" | "success">("upload");
-  const [loading, setLoading] = useState(false);
+  const [analyzingState, setAnalyzingState] = useState<"idle" | "reading" | "extracting" | "classifying" | "saving">("idle");
+  const loading = analyzingState !== "idle";
   const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -32,11 +33,14 @@ export default function ImportTransactionsModal() {
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
-    setLoading(true);
+    setAnalyzingState("reading");
     try {
+      setAnalyzingState("extracting");
       const parsed = await parseStatementFile(acceptedFiles[0]);
       
+      console.log('parsed AI transactional data ', parsed)
       // Auto-run AI Classification
+      setAnalyzingState("classifying");
       const mapping = await classifyTransactions(
         parsed.map(t => ({ id: t.id, note: t.note, amount: t.amount })).filter(t => t.amount !== 0),
         buckets
@@ -60,7 +64,7 @@ export default function ImportTransactionsModal() {
     } catch (err) {
       console.error("Parse error", err);
     } finally {
-      setLoading(false);
+      setAnalyzingState("idle");
     }
   }, [buckets, addBucket]);
 
@@ -75,22 +79,22 @@ export default function ImportTransactionsModal() {
   });
 
   const handleAIClassify = async () => {
-    setLoading(true);
-    const toClassify = transactions.filter(t => selectedIds.has(t.id));
-    const mapping = await classifyTransactions(
-        toClassify.map(t => ({ id: t.id, note: t.note, amount: t.amount })), 
-        buckets
-    );
-    
-    await ensureBucketsExist(mapping);
-    
-    setTransactions(prev => prev.map(t => {
-        if (mapping[t.id]) {
-            return { ...t, bucket: mapping[t.id] };
-        }
-        return t;
-    }));
-    setLoading(false);
+    setAnalyzingState("classifying");
+      const toClassify = transactions.filter(t => selectedIds.has(t.id));
+      const mapping = await classifyTransactions(
+          toClassify.map(t => ({ id: t.id, note: t.note, amount: t.amount })), 
+          buckets
+      );
+      
+      await ensureBucketsExist(mapping);
+      
+      setTransactions(prev => prev.map(t => {
+          if (mapping[t.id]) {
+              return { ...t, bucket: mapping[t.id] };
+          }
+          return t;
+      }));
+      setAnalyzingState("idle");
   };
 
   const updateTransaction = (id: string, field: keyof ParsedTransaction, value: any) => {
@@ -105,28 +109,43 @@ export default function ImportTransactionsModal() {
   };
 
   const handleImport = async () => {
-     setLoading(true);
-     // Simulate slight delay for UX
-     await new Promise(r => setTimeout(r, 600));
+     setAnalyzingState("saving");
+     try {
+       // Simulate slight delay for UX
+       await new Promise(r => setTimeout(r, 400));
 
-     const toImport = transactions.filter(t => selectedIds.has(t.id));
-     
-     await Promise.all(toImport.map(t => 
-         addTransaction({
-             amount: t.amount,
-             note: t.note,
-             bucket: t.bucket || "Uncategorized",
-             occurredAt: t.date 
-         })
-     ));
+       const toImport = transactions.filter(t => selectedIds.size === 0 ? false : selectedIds.has(t.id));
+       if (toImport.length === 0) {
+         setAnalyzingState("idle");
+         return;
+       }
+       
+       const payload = toImport.map((t) => ({
+         amount: t.amount,
+         note: t.note,
+         bucket: t.bucket || "Uncategorized",
+         occurredAt: t.date,
+         type: t.type,
+       }));
 
-     setLoading(false);
-     setStep("success");
-     setTimeout(() => {
-         setOpen(false);
-         setStep("upload");
-         setTransactions([]);
-     }, 1500);
+       // Wait for inserts + backend sync to complete before updating UI
+       await addTransactions(payload);
+
+       // Only show success after everything is done
+       setAnalyzingState("idle");
+       setStep("success");
+
+       setTimeout(() => {
+           setOpen(false);
+           setStep("upload");
+           setTransactions([]);
+           setSelectedIds(new Set());
+       }, 1500);
+     } catch (err) {
+       console.error("Import failed", err);
+       alert(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+       setAnalyzingState("idle");
+     }
   };
 
   return (
@@ -149,22 +168,51 @@ export default function ImportTransactionsModal() {
             {step === "upload" && (
                 <div 
                     {...getRootProps()} 
-                    className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-xl transition-colors cursor-pointer
+                    className={`flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-xl transition-colors ${analyzingState === "idle" ? "cursor-pointer" : ""}
                         ${isDragActive ? 'border-primary bg-primary/10' : 'border-muted-foreground/25 hover:bg-muted/50'}
                     `}
                 >
-                    <input {...getInputProps()} />
-                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                        {loading ? <Loader2 className="animate-spin text-muted-foreground" /> : <FileSpreadsheet className="w-8 h-8 text-muted-foreground" />}
-                    </div>
-                    <p className="font-medium text-lg">
-                        {loading ? "Parsing file..." : "Drag & drop file here"}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">or click to browse</p>
-                    <div className="mt-4 flex gap-2">
-                        <span className="text-xs bg-muted px-2 py-1 rounded">.CSV</span>
-                        <span className="text-xs bg-muted px-2 py-1 rounded">.XLSX</span>
-                    </div>
+                    <input {...getInputProps()} disabled={analyzingState !== "idle"} />
+                    {analyzingState === "idle" ? (
+                      <>
+                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 shadow-sm border border-border/50">
+                            <FileSpreadsheet className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <p className="font-medium text-lg">
+                            Drag & drop file here
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">or click to browse</p>
+                        <div className="mt-4 flex gap-2">
+                            <span className="text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded border border-border/50 shadow-sm">.CSV</span>
+                            <span className="text-xs font-semibold bg-muted text-muted-foreground px-2 py-1 rounded border border-border/50 shadow-sm">.XLSX</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center w-full max-w-sm mt-4 p-6 bg-white dark:bg-slate-900 border border-border/50 shadow-sm rounded-2xl">
+                         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 relative shadow-inner">
+                             <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin" />
+                             <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+                         </div>
+                         <h3 className="font-semibold text-lg mb-6">AI is analyzing your file</h3>
+                         <div className="w-full flex flex-col gap-4">
+                             {/* Reading Phase */}
+                             <div className="flex items-center gap-4 bg-muted/30 p-3 rounded-lg border border-border/30">
+                                {analyzingState === "reading" ? <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" /> : <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />}
+                                <span className={analyzingState === "reading" ? "text-primary font-medium text-sm" : "text-muted-foreground text-sm font-medium"}>Reading file contents...</span>
+                             </div>
+                             {/* Extracting Phase */}
+                             <div className="flex items-center gap-4 bg-muted/30 p-3 rounded-lg border border-border/30">
+                                {analyzingState === "reading" ? <div className="w-4 h-4 rounded-full border-2 border-muted shrink-0 mx-0.5" /> : analyzingState === "extracting" ? <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" /> : <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />}
+                                <span className={analyzingState === "extracting" ? "text-primary font-medium text-sm" : "text-muted-foreground text-sm font-medium"}>Extracting valid transactions...</span>
+                             </div>
+                             {/* Classifying Phase */}
+                             <div className="flex items-center gap-4 bg-muted/30 p-3 rounded-lg border border-border/30">
+                                {["idle", "reading", "extracting"].includes(analyzingState) ? <div className="w-4 h-4 rounded-full border-2 border-muted shrink-0 mx-0.5" /> : analyzingState === "classifying" ? <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" /> : <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />}
+                                <span className={analyzingState === "classifying" ? "text-primary font-medium text-sm" : "text-muted-foreground text-sm font-medium"}>Mapping to your buckets...</span>
+                             </div>
+                         </div>
+                      </div>
+                    )}
                 </div>
             )}
 

@@ -24,6 +24,7 @@ export default function Transactions() {
       amount: Number(amount),
       bucket,
       note,
+      type,
     });
 
     setAmount("");

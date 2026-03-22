@@ -15,10 +15,12 @@ export default function FilterableTransactionList({ transactions, onDelete }: Pr
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
 
   const filtered = transactions.filter((tx) => {
-    const matchesSearch = 
-      tx.note.toLowerCase().includes(search.toLowerCase()) || 
-      tx.bucket.toLowerCase().includes(search.toLowerCase());
-    
+    const q = search.toLowerCase();
+    const matchesSearch =
+      tx.note.toLowerCase().includes(q) ||
+      tx.bucket.toLowerCase().includes(q) ||
+      String(tx.amount).includes(q);
+
     const matchesType = filterType === "all" || tx.type === filterType;
 
     return matchesSearch && matchesType;

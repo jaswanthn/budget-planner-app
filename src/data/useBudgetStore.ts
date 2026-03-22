@@ -6,7 +6,11 @@ import {
   createBucket,
   updateBucket,
 } from "@/api/budget.api";
-import { createTransaction, deleteTransaction } from "@/api/transactions.api";
+import {
+  createTransaction,
+  deleteTransaction,
+  createTransactions,
+} from "@/api/transactions.api";
 import { supabase } from "@/lib/supabase";
 import { fetchLatestIncome, saveIncome } from "@/api/income.api";
 import {
@@ -87,15 +91,15 @@ export function useBudgetStore() {
               .filter((t: any) => t.bucket_id === b.id)
               .reduce((sum: number, t: any) => sum + t.amount, 0),
           })),
-          transactions: transactionRows.map((t: any) => ({
+          transactions: (transactionRows || []).map((t: any) => ({
             id: t.id,
             amount: t.amount,
             bucket:
-              bucketRows.find((b: any) => b.id === t.bucket_id)?.name ??
+              (bucketRows || []).find((b: any) => b.id === t.bucket_id)?.name ??
               "Unknown",
             note: t.note ?? "",
             date: t.occurred_at,
-            type: t.type || "expense",
+            type: (t.type as "expense" | "income") ?? "expense",
             category: t.category || "shopping-bag",
             tags: t.tags || [],
           })),
@@ -126,18 +130,19 @@ export function useBudgetStore() {
     bucket: string;
     note?: string;
     occurredAt?: string;
+    type?: "expense" | "income";
   }) {
     let bucketRecord = data.buckets.find((b) => b.name === input.bucket);
 
     if (!bucketRecord) {
       if (data.buckets.length > 0) {
         console.warn(
-          `Bucket "${input.bucket}" not found. Falling back to "${data.buckets[0].name}".`
+          `Bucket "${input.bucket}" not found. Falling back to "${data.buckets[0].name}".`,
         );
         bucketRecord = data.buckets[0];
       } else {
         console.error(
-          `Bucket "${input.bucket}" not found and no other buckets available. Transaction ignored.`
+          `Bucket "${input.bucket}" not found and no other buckets available. Transaction ignored.`,
         );
         return;
       }
@@ -150,16 +155,14 @@ export function useBudgetStore() {
       bucket: input.bucket,
       note: input.note ?? "",
       date: input.occurredAt || new Date().toISOString(),
-      type: "expense",
-      category: "shopping-bag",
-      tags: [],
+      type: input.type ?? "expense",
     };
 
     // Optimistic UI update
     setData((prev) => ({
       ...prev,
       buckets: prev.buckets.map((b) =>
-        b.name === input.bucket ? { ...b, spent: b.spent + input.amount } : b
+        b.name === input.bucket ? { ...b, spent: b.spent + input.amount } : b,
       ),
       transactions: [optimisticTx, ...(prev.transactions ?? [])],
     }));
@@ -170,13 +173,14 @@ export function useBudgetStore() {
         amount: input.amount,
         note: input.note,
         occurredAt: input.occurredAt || new Date().toISOString().slice(0, 10),
+        type: input.type,
       });
 
       if (newTx && newTx.id) {
         setData((prev) => ({
           ...prev,
           transactions: prev.transactions.map((t) =>
-            t.id === optimisticId ? { ...t, id: newTx.id } : t
+            t.id === optimisticId ? { ...t, id: newTx.id } : t,
           ),
         }));
       }
@@ -185,23 +189,129 @@ export function useBudgetStore() {
     }
   }
 
+  async function addTransactions(
+    inputs: {
+      amount: number;
+      bucket: string;
+      note?: string;
+      occurredAt?: string;
+      type?: "expense" | "income";
+    }[],
+  ) {
+    const optimisticTxs: Transaction[] = [];
+    const validInputs: {
+      bucketId: string;
+      amount: number;
+      note?: string;
+      occurredAt: string;
+      type?: "expense" | "income";
+    }[] = [];
+
+    // Map each to a valid bucket and create optimistic UI entries
+    inputs.forEach((input, index) => {
+      let bucketRecord = data.buckets.find((b) => b.name === input.bucket);
+      if (!bucketRecord) {
+        if (data.buckets.length > 0) {
+          bucketRecord = data.buckets[0];
+        } else {
+          return;
+        }
+      }
+
+      const optimisticId = Date.now() + Math.random() + index;
+      optimisticTxs.push({
+        id: optimisticId,
+        amount: input.amount,
+        bucket: input.bucket,
+        note: input.note ?? "",
+        date: input.occurredAt || new Date().toISOString(),
+        type: input.type || "expense",
+        category: "shopping-bag",
+        tags: [],
+      });
+
+      validInputs.push({
+        bucketId: bucketRecord.id,
+        amount: input.amount,
+        note: input.note,
+        occurredAt: input.occurredAt || new Date().toISOString().slice(0, 10),
+        type: input.type,
+      });
+    });
+
+    if (validInputs.length === 0) return;
+
+    // Optimistic Update
+    setData((prev) => {
+      const spentMap = inputs.reduce(
+        (map, curr) => {
+          map[curr.bucket] = (map[curr.bucket] || 0) + curr.amount;
+          return map;
+        },
+        {} as Record<string, number>,
+      );
+
+      return {
+        ...prev,
+        buckets: prev.buckets.map((b) =>
+          spentMap[b.name] ? { ...b, spent: b.spent + spentMap[b.name] } : b,
+        ),
+        transactions: [...optimisticTxs, ...(prev.transactions ?? [])],
+      };
+    });
+
+    try {
+      await createTransactions(validInputs);
+      // Re-sync from backend to get real UUIDs and accurate spent totals
+      const [bucketRows, transactionRows] = await Promise.all([
+        fetchBuckets(),
+        fetchTransactions(),
+      ]);
+      setData((prev) => ({
+        ...prev,
+        buckets: bucketRows.map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          limit: b.monthly_limit,
+          spent: transactionRows
+            .filter((t: any) => t.bucket_id === b.id)
+            .reduce((sum: number, t: any) => sum + t.amount, 0),
+        })),
+        transactions: (transactionRows || []).map((t: any) => ({
+          id: t.id,
+          amount: t.amount,
+          bucket:
+            (bucketRows || []).find((b: any) => b.id === t.bucket_id)?.name ??
+            "Unknown",
+          note: t.note ?? "",
+          date: t.occurred_at,
+          type: (t.type as "expense" | "income") ?? "expense",
+          category: t.category || "shopping-bag",
+          tags: t.tags || [],
+        })),
+      }));
+    } catch (e) {
+      console.error("Failed to persist transactions in bulk", e);
+    }
+  }
+
   async function deleteTransactionAction(id: string | number) {
     const txToDelete = data.transactions.find(
-      (tx) => String(tx.id) === String(id)
+      (tx) => String(tx.id) === String(id),
     );
     if (!txToDelete) return;
 
     // Optimistic Update
     setData((prev) => {
       const filtered = prev.transactions.filter(
-        (t) => String(t.id) !== String(id)
+        (t) => String(t.id) !== String(id),
       );
       return {
         ...prev,
         buckets: prev.buckets.map((b) =>
           b.name === txToDelete.bucket
             ? { ...b, spent: b.spent - txToDelete.amount }
-            : b
+            : b,
         ),
         transactions: filtered,
       };
@@ -265,7 +375,7 @@ export function useBudgetStore() {
     setData((prev) => ({
       ...prev,
       buckets: prev.buckets.map((b) =>
-        String(b.id) === String(bucketId) ? { ...b, limit: monthlyLimit } : b
+        String(b.id) === String(bucketId) ? { ...b, limit: monthlyLimit } : b,
       ),
     }));
 
@@ -294,6 +404,7 @@ export function useBudgetStore() {
   return {
     data,
     addTransaction,
+    addTransactions,
     deleteTransaction: deleteTransactionAction,
     setIncome,
     setSavingsGoal,

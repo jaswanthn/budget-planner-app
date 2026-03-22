@@ -6,14 +6,16 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 
 export const classifyTransactions = async (
   transactions: { id: string; note: string; amount: number }[],
-  buckets: string[]
+  buckets: string[],
 ): Promise<Record<string, string>> => {
   if (!API_KEY) {
     console.warn("Gemini API Key missing. Skipping AI classification.");
     return {};
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3.1-flash-lite-preview",
+  });
 
   // Batching: LLMs have context limits, but 50-100 tx per batch is usually fine.
   // For safety, let's just send the text list.

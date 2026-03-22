@@ -2,7 +2,7 @@ import { useBudgetStore } from "@/data/useBudgetStore";
 import { useBudgetEngine } from "@/engine/useBudgetEngine";
 
 import SafeToSpendCard from "@/components/SafeToSpendCard";
-import MonthStatusCard from "@/components/MonthStatusCard";
+import MonthlySpendCard from "@/components/MonthlySpendCard";
 import SpendingTrendChart from "@/components/dashboard/SpendingTrendChart";
 import RecentActivityCard from "@/components/dashboard/RecentActivityCard";
 
@@ -25,7 +25,10 @@ export default function Home() {
 
         {/* Side Panel */}
         <div className="space-y-6">
-          <MonthStatusCard status={budget.monthStatus as "on_track" | "tight" | "critical"} />
+          <MonthlySpendCard
+            spent={budget.totalSpent}
+            spendableBudget={budget.spendableBudget}
+          />
           <RecentActivityCard />
         </div>
       </div>

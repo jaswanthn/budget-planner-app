@@ -24,9 +24,9 @@ export default function SavingsGoalSection() {
         console.log("Savings goal saved successfully!");
         setEditing(false);
         setGoalInput("");
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to save savings goal:", err);
-        setError(err.message || "Failed to save goal. Please try again.");
+        setError(err instanceof Error ? err.message : "Failed to save goal. Please try again.");
       } finally {
         setSaving(false);
       }
