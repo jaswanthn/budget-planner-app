@@ -24,21 +24,20 @@ export default function SafeToSpendCard({
   daysLeft
 }: SafeToSpendProps) {
   return (
-    <Card className="border-none shadow-lg overflow-hidden relative group">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <CardHeader className="pb-2 relative z-10">
+    <Card className="shadow-sm border-slate-200 overflow-hidden relative group">
+      <CardHeader className="p-4 pb-2">
         <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Safe to spend today
               </CardTitle>
               <TooltipProvider>
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground/70 cursor-help hover:text-foreground transition-colors" />
+                    <Info className="h-3.5 w-3.5 text-slate-400 cursor-help hover:text-slate-700 transition-colors" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    <p>
+                    <p className="text-sm">
                       Your "Safe to Spend" is calculated based on your Income minus Fixed Expenses, distributed over the remaining days of the month.
                     </p>
                   </TooltipContent>
@@ -46,32 +45,29 @@ export default function SafeToSpendCard({
               </TooltipProvider>
             </div>
             <div className="size-8 rounded-full bg-emerald-100 flex items-center justify-center">
-               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 relative z-10">
+      <CardContent className="p-4 pt-0 space-y-3">
         <div>
-           <div className="text-5xl font-bold tracking-tight text-primary tabular-nums">
+           <div className="text-4xl font-bold tracking-tight text-slate-900 tabular-nums">
              ₹{amount.toLocaleString()}
            </div>
-           <p className="text-sm text-muted-foreground mt-2">
-             You can spend this amount today without impacting your bills or savings goals.
-           </p>
         </div>
 
-        <div className="space-y-2 pt-4 border-t border-border/50">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Total Monthly Budget Remaining</span>
-            <span className="font-semibold text-foreground">₹{remaining.toLocaleString()}</span>
+        <div className="space-y-2 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-500">Total Budget Remaining</span>
+            <span className="font-semibold text-slate-700">₹{remaining.toLocaleString()}</span>
           </div>
-          <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-             <div className="h-full bg-primary/70 rounded-full" style={{ width: `${Math.min(100, (remaining > 0 ? 100 : 0))}%` }} />
+          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+             <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (remaining > 0 ? 100 : 0))}%` }} />
           </div>
           <div className="flex justify-end">
-            <div className="px-2.5 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
-              {daysLeft} days left in month
+            <div className="px-2 py-0.5 rounded text-slate-500 text-[11px] font-medium bg-slate-50">
+              {daysLeft} days left
             </div>
           </div>
         </div>
