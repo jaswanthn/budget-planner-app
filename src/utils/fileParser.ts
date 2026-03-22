@@ -137,7 +137,7 @@ async function mapWithAI(rows: unknown[][]): Promise<ParsedTransaction[]> {
       rowIndex >= 0 &&
       rowIndex < rows.length
     ) {
-      originalRowData = (rows[rowIndex] as unknown[]).reduce(
+      originalRowData = (rows[rowIndex] as any[]).reduce(
         (acc: Record<string, unknown>, val: unknown, idx: number) => {
           const key = String(headerRow[idx] || `col_${idx}`);
           acc[key] = val;
@@ -190,7 +190,7 @@ const mapWithFallback = (rows: unknown[][]): ParsedTransaction[] => {
       note: String(r[nCol] || "").trim(),
       amount,
       type: "expense",
-      originalRow: (r as unknown[]).reduce(
+      originalRow: (r as any[]).reduce(
         (rowAcc: Record<string, unknown>, val, idx) => {
           rowAcc[String(headers[idx] || `col_${idx}`)] = val;
           return rowAcc;
